@@ -1,0 +1,350 @@
+from graphics import *
+from math import *
+import numpy as np
+
+
+list1 = []  # AI下的点
+list2 = []  # 人类下的点
+list3 = []  # 所有下过的点
+list_all = []  # 整个棋盘的点
+next_point = [0, 0]  # AI下一步最应该下的位置
+DEPTH = 3  # 搜索深度
+shape_score = [(50, (0, 1, 1, 0, 0)),
+               (50, (0, 0, 1, 1, 0)),
+               (50, (0, 1, 0, 1, 0)),
+               (500, (1, 1, 0, 1, 0)),
+               (500, (0, 0, 1, 1, 1)),
+               (500, (1, 1, 1, 0, 0)),
+               (500, (1, 1, 0, 0, 1)),
+               (500, (1, 0, 0, 1, 1)),
+               (5000, (0, 1, 1, 1, 0)),
+               (5000, (0, 1, 0, 1, 1, 0)),
+               (5000, (0, 1, 1, 0, 1, 0)),
+               (8000, (1, 1, 1, 0, 1)),
+               (8000, (1, 1, 0, 1, 1)),
+               (8000, (1, 0, 1, 1, 1)),
+               (8000, (1, 1, 1, 1, 0)),
+               (8000, (0, 1, 1, 1, 1)),
+               (50000, (0, 1, 1, 1, 1, 0)),
+               (99999999, (1, 1, 1, 1, 1))]
+def ai():
+    negamax(True, DEPTH, -99999999, 99999999)
+    return next_point[0], next_point[1]
+
+def generator(blank_list):
+    fives=[]
+    fours=[]
+    twothrees=[]
+    threes=[]
+    lowthree=[]
+    twos=[]
+    neigh=[]
+    for blankstep in blank_list:
+        if has_neightnor(blankstep):
+            scoreai=evaluate_point(True,blankstep)
+            scorehum=evaluate_point(False,blankstep)
+            if scoreai>=9999999:
+                return blankstep
+            elif scorehum>=9999999:
+                fives.append((blankstep[0],blankstep[1]))
+            elif scoreai>=35000:
+                fours.insert(0,(blankstep[0],blankstep[1]))
+            elif scoreai>=35000:
+                fours.append((blankstep[0],blankstep[1]))
+            elif scoreai>=7000:
+                twothrees.insert(0,(blankstep[0],blankstep[1]))
+            elif scorehum>=7000:
+                twothrees.append((blankstep[0],blankstep[1]))
+            elif scoreai>=4000:
+                threes.insert(0,(blankstep[0],blankstep[1]))
+            elif scorehum>=4000:
+                threes.append((blankstep[0],blankstep[1]))
+            elif scoreai>=200:
+                lowthree.insert(0,(blankstep[0],blankstep[1]))
+            elif scorehum>=200:
+                lowthree.append((blankstep[0],blankstep[1]))
+            elif scoreai>=40:
+                twos.insert(0,(blankstep[0],blankstep[1]))
+            elif scorehum>=40:
+                twos.append((blankstep[0],blankstep[1]))
+            else :
+                neigh.append((blankstep[0],blankstep[1]))
+    if len(fives)>=1:
+        return fives
+    if len(fours)>=1:
+        return fours
+    if len(twothrees)>=1:
+        return twothrees
+    if len(lowthree)>=1:
+        return lowthree
+    if len(threes)>=1:
+        return threes
+    lowthree.extend(twos)
+    lowthree.extend(neigh)
+    return lowthree
+
+
+def has_neightnor(pt):
+    for i in range(-1, 2):
+        for j in range(-1, 2):
+            if i == 0 and j == 0:
+                continue
+            if (pt[0] + i, pt[1]+j) in list3:
+                return True
+    return False
+
+def negamax(is_ai, depth, alpha, beta):
+    #深度为零则评估棋盘后返回
+    if depth<=0:
+        return evaluation(is_ai)
+    #游戏结束则立即返回
+    if game_win(list1) or game_win(list2):
+        return  evaluation(is_ai)
+    #计算出可以走的步骤
+    blank_list = list(set(list_all).difference(set(list3)))
+    #启发式搜索改变遍历顺序
+    blank_list=generator(blank_list)
+    for next_step in blank_list:
+        if not has_neightnor(next_step):
+            continue
+        if is_ai:
+            list1.append(next_step)
+            list3.append(next_step)
+            value = -negamax(not is_ai, depth - 1, -beta, -alpha)
+            list1.remove(next_step)
+            list3.remove(next_step)
+            if value > alpha:
+                print("AI正在急速思考请耐心等待")
+                if depth == DEPTH:
+                    next_point[0] = next_step[0]
+                    next_point[1] = next_step[1]
+                if value >= beta:
+                    return beta
+                alpha = value
+        else:
+            list2.append(next_step)
+            list3.append(next_step)
+            value = -negamax(not is_ai, depth - 1, -beta, -alpha)
+            list2.remove(next_step)
+            list3.remove(next_step)
+            if value > alpha:
+                print("AI正在思考中请更加耐心等待")
+                if depth == DEPTH:
+                    next_point[0] = next_step[0]
+                    next_point[1] = next_step[1]
+                if value >= beta:
+                    return beta
+                alpha = value
+    return alpha
+
+def evaluate_point(is_ai,pt):
+    scoreall=0
+    if is_ai==True:
+        dir0= calculate0(pt[0], pt[1],list2, list1)
+        dir45= calculate45(pt[0], pt[1],list2, list1)
+        dir90= calculate90(pt[0], pt[1],list2, list1)
+        dir135= calculate135(pt[0], pt[1],list2, list1)
+        scoreall=dir0+dir45+dir90+dir135
+        return scoreall
+    if is_ai==False:
+        dir0= calculate0(pt[0], pt[1],list1, list2)
+        dir45= calculate45(pt[0], pt[1],list1, list2)
+        dir90= calculate90(pt[0], pt[1],list1, list2)
+        dir135= calculate135(pt[0], pt[1],list1, list2)
+        scoreall=dir0+dir45+dir90+dir135
+        return scoreall
+
+def evaluation(is_ai):
+    scoreall = 0
+    if is_ai:
+        my_list = list1
+        enemy_list = list2
+        my_score = 0
+        enemy_score = 0
+        for pt in my_list:
+            my_score += calculate0(pt[0], pt[1],enemy_list, my_list)
+            my_score += calculate45(pt[0], pt[1],enemy_list, my_list)
+            my_score += calculate90(pt[0], pt[1],enemy_list, my_list)
+            my_score += calculate135(pt[0], pt[1],enemy_list, my_list)
+        for pt in enemy_list:
+            enemy_score += calculate0(pt[0], pt[1],my_list, enemy_list)
+            enemy_score += calculate45(pt[0], pt[1],my_list, enemy_list)
+            enemy_score += calculate90(pt[0], pt[1],my_list, enemy_list)
+            enemy_score += calculate135(pt[0], pt[1],my_list, enemy_list)
+        scoreall = my_score - enemy_score * 0.2
+    else:
+        my_list = list2
+        enemy_list = list1
+        my_score = 0
+        enemy_score = 0
+        for pt in my_list:
+            my_score += calculate0(pt[0], pt[1],enemy_list, my_list)
+            my_score += calculate45(pt[0], pt[1],enemy_list, my_list)
+            my_score += calculate90(pt[0], pt[1],enemy_list, my_list)
+            my_score += calculate135(pt[0], pt[1],enemy_list, my_list)
+        for pt in enemy_list:
+            enemy_score += calculate0(pt[0], pt[1],my_list, enemy_list)
+            enemy_score += calculate45(pt[0], pt[1],my_list, enemy_list)
+            enemy_score += calculate90(pt[0], pt[1],my_list, enemy_list)
+            enemy_score += calculate135(pt[0], pt[1],my_list, enemy_list)
+        scoreall = my_score - enemy_score * 0.2
+    return scoreall
+
+def calculate0(m, n,enemy_list, my_list):
+    max_score_shape = (0, None)
+    for i in range(-5, 1):
+        pos = []
+        for j in range(0, 6):
+            if (m+i+j,n) in enemy_list:
+                pos.append(2)
+            elif (m+i+j, n) in my_list:
+                pos.append(1)
+            else:
+                pos.append(0)
+        shape1 = (pos[0], pos[1], pos[2], pos[3], pos[4])
+        shape2 = (pos[0], pos[1], pos[2], pos[3], pos[4], pos[5])
+        for (score, shape) in shape_score:
+            if shape1 == shape or shape2 == shape:
+                if score > max_score_shape[0]:
+                    max_score_shape = (score, ((m+0+i,n),(m+1+i, n),(m+2+i, n),(m+3+i,n),(m+4+i,n)))
+    return max_score_shape[0]
+
+def calculate45(m, n,enemy_list, my_list):
+    max_score_shape = (0, None)
+    for i in range(-5, 1):
+        pos = []
+        for j in range(0, 6):
+            if (m+i+j, n+i+j) in enemy_list:
+                pos.append(2)
+            elif (m+i+j, n+i+j) in my_list:
+                pos.append(1)
+            else:
+                pos.append(0)
+        shape1 = (pos[0], pos[1], pos[2], pos[3], pos[4])
+        shape2 = (pos[0], pos[1], pos[2], pos[3], pos[4], pos[5])
+        for (score, shape) in shape_score:
+            if shape1 == shape or shape2 == shape:
+                if score > max_score_shape[0]:
+                    max_score_shape = (score, ((m+0+i, n+0+i),(m+1+i, n+1+i),(m+2+i, n+2+i),(m+3+i, n+3+i),(m+4+i, n+4+i)))
+    return max_score_shape[0]
+def calculate90(m, n,enemy_list, my_list):
+    max_score_shape = (0, None)
+    for i in range(-5, 1):
+        pos = []
+        for j in range(0, 6):
+            if (m, n +i+j) in enemy_list:
+                pos.append(2)
+            elif (m, n+i+j) in my_list:
+                pos.append(1)
+            else:
+                pos.append(0)
+        shape1 = (pos[0], pos[1], pos[2], pos[3], pos[4])
+        shape2 = (pos[0], pos[1], pos[2], pos[3], pos[4], pos[5])
+        for (score, shape) in shape_score:
+            if shape1 == shape or shape2 == shape:
+                if score > max_score_shape[0]:
+                    max_score_shape = (score, ((m, n+0+i),(m, n+1+i),(m, n+2+i),(m, n+3+i),(m, n+4+i)))
+    return max_score_shape[0]
+def calculate135(m, n,enemy_list, my_list):
+    max_score_shape = (0, None)
+    for i in range(-5, 1):
+        pos = []
+        for j in range(0, 6):
+            if (m-i-j, n+i+j) in enemy_list:
+                pos.append(2)
+            elif (m-i-j, n+i+j) in my_list:
+                pos.append(1)
+            else:
+                pos.append(0)
+        shape1 = (pos[0], pos[1], pos[2], pos[3], pos[4])
+        shape2 = (pos[0], pos[1], pos[2], pos[3], pos[4], pos[5])
+        for (score, shape) in shape_score:
+            if shape1 == shape or shape2 == shape:
+                if score > max_score_shape[0]:
+                    max_score_shape = (score, ((m-0-i, n+0+i),(m-1-i, n+1+i),(m-2-i, n+2+i),(m-3-i, n+3+i),(m-4-i, n+4+i)))
+    return max_score_shape[0]
+
+GRID_WIDTH = 40
+COLUMN = 10
+ROW = 10
+
+def game_win(list):
+    for m in range(COLUMN):
+        for n in range(ROW):
+            if n < ROW - 4 and (m, n) in list and (m, n + 1) in list and (m, n + 2) in list and (m, n + 3) in list and (m, n + 4) in list:
+                return True
+            elif m < ROW - 4 and (m, n) in list and (m + 1, n) in list and (m + 2, n) in list and (m + 3, n) in list and (m + 4, n) in list:
+                return True
+            elif m < ROW - 4 and n < ROW - 4 and (m, n) in list and (m + 1, n + 1) in list and (m + 2, n + 2) in list and (m + 3, n + 3) in list and (m + 4, n + 4) in list:
+                return True
+            elif m < ROW - 4 and n > 3 and (m, n) in list and (m + 1, n - 1) in list and (m + 2, n - 2) in list and (m + 3, n - 3) in list and (m + 4, n - 4) in list:
+                return True
+    return False
+
+
+def gobangwin():
+    win = GraphWin("gobang by zyTvT", GRID_WIDTH * COLUMN, GRID_WIDTH * ROW)
+    win.setBackground("gray")
+    i1 = 0
+
+    while i1 <= GRID_WIDTH * COLUMN:
+        l = Line(Point(i1, 0), Point(i1, GRID_WIDTH * COLUMN))
+        l.draw(win)
+        i1 = i1 + GRID_WIDTH
+    i2 = 0
+
+    while i2 <= GRID_WIDTH * ROW:
+        l = Line(Point(0, i2), Point(GRID_WIDTH * ROW, i2))
+        l.draw(win)
+        i2 = i2 + GRID_WIDTH
+    return win
+
+
+def main():
+    win = gobangwin()
+    for i in range(COLUMN+1):
+        for j in range(ROW+1):
+            list_all.append((i, j))
+    change = 0
+    g = 0
+    m = 0
+    n = 0
+    while g == 0:
+        if change % 2 == 1:
+            pos = ai()
+            if pos in list3:
+                message = Text(Point(200, 200), "不可用的位置" + str(pos[0]) + "," + str(pos[1]))
+                message.draw(win)
+                g = 1
+            list1.append(pos)
+            list3.append(pos)
+            piece = Circle(Point(GRID_WIDTH * pos[0], GRID_WIDTH * pos[1]), 16)
+            piece.setFill('white')
+            piece.draw(win)
+            if game_win(list1):
+                message = Text(Point(100, 100), "white win.")
+                message.draw(win)
+                g = 1
+            change = change + 1
+        else:
+            p2 = win.getMouse()
+            if not ((round((p2.getX()) / GRID_WIDTH), round((p2.getY()) / GRID_WIDTH)) in list3):
+                a2 = round((p2.getX()) / GRID_WIDTH)
+                b2 = round((p2.getY()) / GRID_WIDTH)
+                list2.append((a2, b2))
+                list3.append((a2, b2))
+                piece = Circle(Point(GRID_WIDTH * a2, GRID_WIDTH * b2), 16)
+                piece.setFill('black')
+                piece.draw(win)
+                if game_win(list2):
+                    message = Text(Point(100, 100), "black win.")
+                    message.draw(win)
+                    g = 1
+                change = change + 1
+    message = Text(Point(100, 120), "Click anywhere to quit.")
+    message.draw(win)
+    win.getMouse()
+    win.close()
+
+
+main()
